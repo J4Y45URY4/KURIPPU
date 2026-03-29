@@ -1,5 +1,5 @@
-/* Kurippu v3 — Global Styles */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;600;700;900&family=Plus+Jakarta+Sans:wght@400;600;700;900&display=swap');
+/* Kurippu v4 — Premium Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;600;700;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -15,11 +15,11 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* MOBILE: full screen */
+/* MOBILE: full screen with subtle gradient background */
 body {
-  background: #f3f4f6;
-  font-family: 'Plus Jakarta Sans', 'Noto Sans Malayalam', 'Segoe UI', system-ui, sans-serif;
-  color: #374151;
+  background: #f8fafc;
+  font-family: 'Outfit', 'Noto Sans Malayalam', 'Segoe UI', system-ui, sans-serif;
+  color: #1e293b;
   overscroll-behavior: none;
 }
 
@@ -29,26 +29,41 @@ body {
   flex-direction: column;
 }
 
-/* DESKTOP: dark background, centered phone frame */
+/* DESKTOP: dark background, centered iPhone-like frame */
 @media (min-width: 640px) {
   body {
-    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+    background: radial-gradient(circle at 50% -20%, #1e293b, #0f172a 80%);
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
     padding: 24px;
+    margin: 0;
+    overflow: hidden;
   }
   #root {
     height: auto;
     width: 100%;
-    max-width: 480px;
+    max-width: 440px;
     min-height: 750px;
     height: 90vh;
-    max-height: 900px;
-    border-radius: 40px;
+    max-height: 880px;
+    border-radius: 54px;
     overflow: hidden;
-    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08);
+    position: relative;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.6), inset 0 0 0 12px #0f172a, inset 0 0 0 14px rgba(255,255,255,0.2);
+    background: #f8fafc;
+  }
+  #root::before {
+    content: '';
+    position: absolute;
+    top: 6px; left: 50%;
+    transform: translateX(-50%);
+    width: 130px; height: 32px;
+    background: #0f172a;
+    border-radius: 0 0 24px 24px;
+    z-index: 9999;
+    pointer-events: none;
   }
 }
 
@@ -61,9 +76,88 @@ button, a {
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
 :focus-visible {
-  outline: 3px solid #2563eb;
+  outline: 3px solid #3b82f6;
   outline-offset: 2px;
+}
+
+/* UTILITY CLASSES FOR UI IMPROVEMENT */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 1);
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.05);
+  border-radius: 28px;
+  overflow: hidden;
+  position: relative;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #1d4ed8, #6366f1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #2563eb, #6366f1);
+  color: white;
+  border: none;
+  box-shadow: 0 8px 24px -6px rgba(37, 99, 235, 0.5);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.gradient-bg:active {
+  transform: scale(0.96);
+  box-shadow: 0 4px 12px -4px rgba(37, 99, 235, 0.4);
+}
+
+.pulse-glow {
+  animation: pulse-glow-anim 2s infinite;
+}
+
+@keyframes pulse-glow-anim {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+  50% { box-shadow: 0 0 20px 4px rgba(74, 222, 128, 0); }
+}
+
+.slide-up {
+  animation: slide-up-anim 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.slide-up-delay-1 { animation-delay: 0.1s; }
+.slide-up-delay-2 { animation-delay: 0.2s; }
+.slide-up-delay-3 { animation-delay: 0.3s; }
+
+@keyframes slide-up-anim {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bounce-hover:hover {
+  transform: translateY(-2px);
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.streak-fire {
+  background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: float 2s ease-in-out infinite alternate;
+}
+
+@keyframes float {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-3px); }
 }

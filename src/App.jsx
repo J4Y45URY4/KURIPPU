@@ -6,20 +6,21 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Camera, Clock, ShieldAlert, CheckCircle2, Phone,
   User, ClipboardList, Bell, Shield, Play, RefreshCw, X, Circle, ChevronLeft,
+  Activity, Flame
 } from "lucide-react";
 import { analyzePrescription } from "./api";
 
 const C = {
-  blue:"#1e40af",blueMid:"#2563eb",blueLight:"#dbeafe",
-  red:"#b91c1c",redLight:"#fee2e2",green:"#15803d",greenLight:"#dcfce7",
-  amber:"#b45309",amberLight:"#fef3c7",purple:"#7c3aed",purpleLight:"#ede9fe",
-  gray:"#374151",grayLight:"#f3f4f6",white:"#ffffff",
+  blue:"#2563eb",blueMid:"#3b82f6",blueLight:"#eff6ff",
+  red:"#ef4444",redLight:"#fef2f2",green:"#10b981",greenLight:"#ecfdf5",
+  amber:"#f59e0b",amberLight:"#fffbeb",purple:"#8b5cf6",purpleLight:"#f5f3ff",
+  gray:"#475569",grayLight:"#f1f5f9",white:"#ffffff",
 };
 
-const ALARM_COLORS=[{hex:"#1e40af"},{hex:"#15803d"},{hex:"#b91c1c"},{hex:"#7c3aed"},{hex:"#b45309"},{hex:"#0e7490"}];
+const ALARM_COLORS=[{hex:"#2563eb"},{hex:"#10b981"},{hex:"#ef4444"},{hex:"#8b5cf6"},{hex:"#f59e0b"},{hex:"#0891b2"}];
 const TABLET_SIZES=["Small round white","Medium oval yellow","Large capsule red","Small oblong pink","Medium round blue","Custom"];
-const SCREENS={HOME:"home",LOADING:"loading",RESULTS:"results",CONFLICT:"conflict",MEDLOG:"medlog",HISTORY:"history",PROFILE:"profile",SAFETY:"safety",ALARM:"alarm",DEMO:"demo"};
-const STORAGE={PROFILE:"kurippu_profile_v2",HISTORY:"kurippu_history_v2",MED_LOG:"kurippu_med_log_v2",ALARMS:"kurippu_alarms_v3"};
+const SCREENS={HOME:"home",LOADING:"loading",RESULTS:"results",CONFLICT:"conflict",MEDLOG:"medlog",HISTORY:"history",PROFILE:"profile",SAFETY:"safety",ALARM:"alarm",DEMO:"demo",CONNECT:"connect"};
+const STORAGE={PROFILE:"kurippu_profile_v2",HISTORY:"kurippu_history_v2",MED_LOG:"kurippu_med_log_v2",ALARMS:"kurippu_alarms_v3",VITALS:"kurippu_vitals_v1"};
 const DEFAULT_PROFILE={name:"Rajan Nair",age:71,bloodGroup:"B+",emergencyContact:"9447000000",caretakerPhone:"9846000000",currentMedications:[{id:"m1",name:"Warfarin",dosage:"5mg",frequency:"Once daily",condition:"Atrial Fibrillation",totalQuantity:30,remainingQuantity:5},{id:"m2",name:"Metoprolol",dosage:"25mg",frequency:"Twice daily",condition:"Hypertension",totalQuantity:60,remainingQuantity:45}],allergies:["Penicillin","Sulfa drugs"]};
 
 const T={
@@ -37,6 +38,8 @@ const store={
   isTaken:(medId,di)=>{const log=store.loadMedLog();const today=new Date().toISOString().slice(0,10);return!!(log?.[today]?.[medId]?.[di])},
   loadAlarms:()=>{try{const r=localStorage.getItem(STORAGE.ALARMS);return r?JSON.parse(r):[]}catch{return[]}},
   saveAlarms:(a)=>localStorage.setItem(STORAGE.ALARMS,JSON.stringify(a)),
+  loadVitals:()=>{try{const r=localStorage.getItem(STORAGE.VITALS);return r?JSON.parse(r):[]}catch{return[]}},
+  addVital:(v)=>{const a=store.loadVitals();a.unshift({id:Date.now().toString(),date:new Date().toISOString(),...v});localStorage.setItem(STORAGE.VITALS,JSON.stringify(a));},
 };
 
 function playChime(urgent=false){
@@ -61,22 +64,22 @@ const SOSButton=({t})=>(
   </a>
 );
 
-const Card=({children,style={},danger=false,success=false,info=false})=>(
-  <div style={{background:danger?C.redLight:success?C.greenLight:info?C.blueLight:C.white,borderRadius:16,padding:"18px",marginBottom:14,boxShadow:"0 2px 12px rgba(0,0,0,0.07)",border:danger?`2px solid ${C.red}`:success?`2px solid ${C.green}`:info?`2px solid ${C.blue}`:"none",...style}}>
+const Card=({children,style={},danger=false,success=false,info=false,className=""})=>(
+  <div className={`glass-card ${className}`} style={{background:danger?"#fef2f2":success?"#ecfdf5":info?"#eff6ff":"rgba(255, 255, 255, 0.85)",padding:"24px",marginBottom:18,border:danger?`1px solid rgba(239,68,68,0.3)`:success?`1px solid rgba(16,185,129,0.3)`:info?`1px solid rgba(59,130,246,0.3)`:"1px solid rgba(255,255,255,0.9)",borderRadius:28,boxShadow:"0 12px 36px rgba(15, 23, 42, 0.05)",...style}}>
     {children}
   </div>
 );
 
-const BigBtn=({onClick,label,sub,icon:Icon,color=C.blue,disabled})=>(
-  <button onClick={onClick} disabled={disabled} style={{width:"100%",background:disabled?"#9ca3af":color,color:C.white,border:"none",borderRadius:18,padding:"18px 22px",display:"flex",alignItems:"center",gap:14,cursor:disabled?"not-allowed":"pointer",marginBottom:12,boxShadow:disabled?"none":`0 4px 16px ${color}55`,fontFamily:"inherit"}}
-    onMouseDown={e=>!disabled&&(e.currentTarget.style.transform="scale(0.97)")}
-    onMouseUp={e=>!disabled&&(e.currentTarget.style.transform="scale(1)")}
-    onTouchStart={e=>!disabled&&(e.currentTarget.style.transform="scale(0.97)")}
-    onTouchEnd={e=>!disabled&&(e.currentTarget.style.transform="scale(1)")}>
-    {Icon&&<Icon size={28} strokeWidth={2} style={{flexShrink:0}}/>}
+const BigBtn=({onClick,label,sub,icon:Icon,color=C.blue,disabled,className=""})=>(
+  <button onClick={onClick} disabled={disabled} className={`bounce-hover ${className}`} style={{width:"100%",background:disabled?"#cbd5e1":(color===C.blue?"linear-gradient(135deg, #2563eb, #4f46e5)":color===C.green?"linear-gradient(135deg, #10b981, #059669)":color===C.purple?"linear-gradient(135deg, #8b5cf6, #6d28d9)":color===C.red?"linear-gradient(135deg, #ef4444, #dc2626)":color),color:"#fff",border:"1px solid rgba(255,255,255,0.2)",borderRadius:26,padding:"20px 24px",display:"flex",alignItems:"center",gap:18,cursor:disabled?"not-allowed":"pointer",marginBottom:16,boxShadow:disabled?"none":`0 16px 32px ${color}40, inset 0 2px 4px rgba(255,255,255,0.3)`,fontFamily:"inherit"}}
+    onMouseDown={e=>!disabled&&(e.currentTarget.style.transform="scale(0.96)")}
+    onMouseUp={e=>!disabled&&(e.currentTarget.style.transform="translateY(-2px)")}
+    onTouchStart={e=>!disabled&&(e.currentTarget.style.transform="scale(0.96)")}
+    onTouchEnd={e=>!disabled&&(e.currentTarget.style.transform="translateY(-2px)")}>
+    {Icon&&<div style={{background:"rgba(255,255,255,0.25)",padding:12,borderRadius:18,display:"flex",alignItems:"center",justifyContent:"center"}}><Icon size={28} strokeWidth={2.5} style={{flexShrink:0}}/></div>}
     <div style={{textAlign:"left"}}>
-      <div style={{fontSize:19,fontWeight:900}}>{label}</div>
-      {sub&&<div style={{fontSize:13,opacity:.85,marginTop:2}}>{sub}</div>}
+      <div style={{fontSize:21,fontWeight:800,letterSpacing:0.3,textShadow:"0 1px 2px rgba(0,0,0,0.15)"}}>{label}</div>
+      {sub&&<div style={{fontSize:14,opacity:.95,marginTop:4,fontWeight:600}}>{sub}</div>}
     </div>
   </button>
 );
@@ -85,8 +88,48 @@ const Badge=({label,color=C.blue,bg})=>(
   <span style={{background:bg||`${color}22`,color,padding:"3px 11px",borderRadius:100,fontSize:13,fontWeight:700,display:"inline-block"}}>{label}</span>
 );
 
+const calculateStreak=(log)=>{
+  let s=0, d=new Date();
+  for(let i=0;i<30;i++){
+    const iso=d.toISOString().slice(0,10);
+    const m=log[iso];
+    if(m && Object.keys(m).length>0) s++;
+    else if(i!==0) break;
+    d.setDate(d.getDate()-1);
+  }
+  return s;
+};
+
+const autoGenerateAlarms=(meds, store)=>{
+  const existingAlarms = store.loadAlarms();
+  let updated = [...existingAlarms];
+  let changed = false;
+  const defaultTimes = { Morning: "08:00", Afternoon: "13:00", Evening: "20:00", "As needed": "12:00" };
+  const pd=(freq="")=>{const f=freq.toLowerCase();if(f.includes("twice"))return["Morning","Evening"];if(f.includes("three")||f.includes("thrice"))return["Morning","Afternoon","Evening"];if(f.includes("once")||f.includes("daily"))return["Morning"];return["As needed"];};
+  
+  (meds||[]).forEach((m, idx) => {
+    const times = pd(m.frequency);
+    const color = ALARM_COLORS[idx % ALARM_COLORS.length].hex;
+    const hasAlarm = updated.some(a => a.med === m.name);
+    if (!hasAlarm && times.length > 0) {
+      times.forEach(tName => {
+        updated.push({
+          id: Date.now().toString() + Math.random().toString(),
+          med: m.name,
+          time: defaultTimes[tName] || "09:00",
+          color: color,
+          size: TABLET_SIZES[0],
+          enabled: true
+        });
+        changed = true;
+      });
+    }
+  });
+  if(changed) store.saveAlarms(updated);
+};
+
 // ── HOME ──────────────────────────────────────────────────────────────────────
-function HomeScreen({t,lang,profile,onScan,onViewLog,onDemo}){
+function HomeScreen({t,lang,profile,onScan,onViewLog,onDemo,onConnect}){
   const fileRef=useRef(null);
   const videoRef=useRef(null);
   const canvasRef=useRef(null);
@@ -94,66 +137,74 @@ function HomeScreen({t,lang,profile,onScan,onViewLog,onDemo}){
   const [showModal,setShowModal]=useState(false);
   const [cameraOn,setCameraOn]=useState(false);
   const [facing,setFacing]=useState("environment");
+  const streak=calculateStreak(store.loadMedLog());
 
   const hour=new Date().getHours();
   const greeting=hour<12?(lang==="ml"?"സുപ്രഭാതം":"Good Morning"):hour<17?(lang==="ml"?"ഉच्ചകഴിഞ്ഞ ആശംസ":"Good Afternoon"):(lang==="ml"?"ശুഭസন്ധ്യ":"Good Evening");
 
   const handleFile=(e)=>{const f=e.target.files?.[0];if(f){setShowModal(false);onScan(f);}};
-
   const startCam=async()=>{
+    if(!navigator.mediaDevices?.getUserMedia){
+      alert("Camera API not supported or requires localhost/HTTPS. Please use 'Upload Photo' instead.");
+      return;
+    }
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing}});
-      streamRef.current=stream;
-      if(videoRef.current)videoRef.current.srcObject=stream;
+      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing}});
+      streamRef.current=s;
+      if(videoRef.current)videoRef.current.srcObject=s;
       setCameraOn(true);
-    }catch{alert("Camera denied. Use Upload instead.");}
+    }catch(err){alert("Camera error: "+err.message);}
   };
-
   const stopCam=()=>{streamRef.current?.getTracks().forEach(t=>t.stop());streamRef.current=null;setCameraOn(false);};
-
-  const flipCam=async()=>{
-    stopCam();
-    const next=facing==="environment"?"user":"environment";
-    setFacing(next);
-    setTimeout(async()=>{
-      try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:next}});streamRef.current=s;if(videoRef.current)videoRef.current.srcObject=s;setCameraOn(true);}catch{}
-    },200);
-  };
-
-  const capture=()=>{
-    const v=videoRef.current,c=canvasRef.current;
-    c.width=v.videoWidth;c.height=v.videoHeight;
-    c.getContext("2d").drawImage(v,0,0);
-    c.toBlob(blob=>{stopCam();setShowModal(false);onScan(new File([blob],"capture.jpg",{type:"image/jpeg"}));},"image/jpeg",.9);
-  };
-
+  const flipCam=async()=>{stopCam();const nx=facing==="environment"?"user":"environment";setFacing(nx);setTimeout(async()=>{try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:nx}});streamRef.current=s;if(videoRef.current)videoRef.current.srcObject=s;setCameraOn(true);}catch{}},200);};
+  const capture=()=>{const v=videoRef.current,c=canvasRef.current;c.width=v.videoWidth;c.height=v.videoHeight;c.getContext("2d").drawImage(v,0,0);c.toBlob(b=>{stopCam();setShowModal(false);onScan(new File([b],"cap.jpg",{type:"image/jpeg"}));},"image/jpeg",.9);};
   const close=()=>{stopCam();setShowModal(false);};
 
   return(
-    <div style={{padding:"18px 16px 16px"}}>
-      <div style={{background:`linear-gradient(135deg,${C.blue} 0%,${C.blueMid} 100%)`,borderRadius:20,padding:"22px",marginBottom:20,color:C.white}}>
-        <div style={{fontSize:15,opacity:.85}}>{greeting},</div>
-        <div style={{fontSize:26,fontWeight:900,marginTop:3}}>{profile.name} 👋</div>
-        <div style={{fontSize:14,opacity:.8,marginTop:6}}>{lang==="ml"?`${profile.age} വയസ്സ് • ${profile.bloodGroup}`:`Age ${profile.age} • Blood: ${profile.bloodGroup}`}</div>
+    <div style={{padding:"24px 20px 20px"}} className="slide-up">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
+        <div className="gradient-bg" style={{borderRadius:24,padding:"24px",flex:1}}>
+          <div style={{fontSize:16,opacity:.9}}>{greeting},</div>
+          <div style={{fontSize:28,fontWeight:900,marginTop:4,letterSpacing:0.5}}>{profile.name}</div>
+          <div style={{fontSize:14,opacity:.85,marginTop:8}}>{lang==="ml"?`${profile.age} വയസ്സ് • ${profile.bloodGroup}`:`Age ${profile.age} • Blood: ${profile.bloodGroup}`}</div>
+        </div>
+        <div className="glass-card flex-center" style={{flexDirection:"column",marginLeft:16,width:80,height:108,borderRadius:24,background:"linear-gradient(145deg, #ffffff, #f1f5f9)",border:"2px solid #fff",boxShadow:"0 8px 24px rgba(0,0,0,0.06)"}}>
+           <Flame size={32} className="streak-fire" style={{marginBottom:4}}/>
+           <div style={{fontSize:22,fontWeight:900,color:"#1e293b"}}>{streak}</div>
+           <div style={{fontSize:11,fontWeight:700,color:C.gray,opacity:.7}}>{lang==="ml"?"ദിവസം":"Days"}</div>
+        </div>
       </div>
 
       <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleFile}/>
 
-      <div style={{display:"flex",gap:10,marginBottom:12}}>
-        <button onClick={()=>setShowModal(true)} style={{flex:1,background:C.blue,color:C.white,border:"none",borderRadius:18,padding:"18px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer",boxShadow:`0 4px 16px ${C.blue}55`,fontFamily:"inherit"}}>
-          <Camera size={26} strokeWidth={2} style={{flexShrink:0}}/>
+      <div style={{display:"flex",gap:14,marginBottom:16}}>
+        <button onClick={()=>setShowModal(true)} className="bounce-hover" style={{flex:1,background:"linear-gradient(135deg, #10b981, #059669)",color:C.white,border:"none",borderRadius:24,padding:"22px 20px",display:"flex",alignItems:"center",gap:16,cursor:"pointer",boxShadow:`0 12px 28px rgba(16, 185, 129, 0.4)`,fontFamily:"inherit"}}>
+          <Camera size={32} strokeWidth={2.5} style={{flexShrink:0}}/>
           <div style={{textAlign:"left"}}>
-            <div style={{fontSize:18,fontWeight:900}}>{t.scanNew}</div>
-            <div style={{fontSize:12,opacity:.85}}>{t.scanSub}</div>
+            <div style={{fontSize:19,fontWeight:900,letterSpacing:0.2}}>{t.scanNew}</div>
+            <div style={{fontSize:13,opacity:.9,fontWeight:500,marginTop:2}}>{t.scanSub}</div>
           </div>
         </button>
-        <button onClick={onDemo} style={{background:C.purple,color:C.white,border:"none",borderRadius:18,padding:"16px 14px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,cursor:"pointer",boxShadow:`0 4px 16px ${C.purple}55`,minWidth:84,fontFamily:"inherit"}}>
-          <Play size={20} strokeWidth={2}/>
-          <span style={{fontSize:11,fontWeight:800}}>{lang==="ml"?"ഡെമോ":"Demo"}</span>
+        <button onClick={onDemo} className="bounce-hover" style={{background:"linear-gradient(135deg, #8b5cf6, #6d28d9)",color:C.white,border:"none",borderRadius:24,padding:"20px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",boxShadow:`0 12px 28px rgba(139, 92, 246, 0.4)`,minWidth:90,fontFamily:"inherit"}}>
+          <Play size={26} strokeWidth={2.5} fill="#fff"/>
+          <span style={{fontSize:12,fontWeight:800}}>{lang==="ml"?"ഡെമോ":"Demo"}</span>
         </button>
       </div>
 
-      <BigBtn onClick={onViewLog} label={t.viewLog} sub={t.viewLogSub} icon={ClipboardList} color={C.green}/>
+      <div style={{display:"flex",gap:12,marginBottom:16}}>
+        <button onClick={onViewLog} className="bounce-hover flex-center" style={{flex:1,background:"linear-gradient(135deg, #2563eb, #3b82f6)",color:C.white,border:"none",borderRadius:20,padding:"18px",gap:12,cursor:"pointer",boxShadow:`0 8px 24px rgba(37,99,235,0.4)`,fontFamily:"inherit"}}>
+          <ClipboardList size={22} strokeWidth={2.5}/>
+          <div style={{textAlign:"left"}}>
+            <div style={{fontSize:16,fontWeight:800}}>{t.viewLog}</div>
+          </div>
+        </button>
+        <button onClick={onConnect} className="bounce-hover flex-center glass-card" style={{flex:1,color:C.blue,padding:"18px",gap:12,cursor:"pointer",fontFamily:"inherit",border:"none"}}>
+          <Phone size={22} strokeWidth={2.5}/>
+          <div style={{textAlign:"left"}}>
+            <div style={{fontSize:16,fontWeight:800}}>{lang==="ml"?"സഹായം":"Care Connect"}</div>
+          </div>
+        </button>
+      </div>
 
       <Card>
         <div style={{fontSize:"1rem",fontWeight:800,color:C.blue,marginBottom:12}}>🛡 {t.currentMeds}</div>
@@ -187,24 +238,23 @@ function HomeScreen({t,lang,profile,onScan,onViewLog,onDemo}){
               <button onClick={close} style={{background:"none",border:"none",color:C.white,cursor:"pointer",padding:4}}><X size={20}/></button>
             </div>
             <div style={{padding:20}}>
-              {!cameraOn?(
+              {!cameraOn && (
                 <>
                   <BigBtn onClick={startCam} label={t.useCamera} sub={t.useCameraSub} icon={Camera} color={C.blue}/>
                   <BigBtn onClick={()=>{fileRef.current?.click();close();}} label={t.uploadPhoto} sub={t.uploadSub} icon={ClipboardList} color={C.gray}/>
                 </>
-              ):(
-                <>
-                  <video ref={videoRef} autoPlay playsInline style={{width:"100%",borderRadius:12,background:"#000",display:"block"}}/>
-                  <canvas ref={canvasRef} style={{display:"none"}}/>
-                  <div style={{display:"flex",gap:10,marginTop:12}}>
-                    <button onClick={capture} style={{flex:1,background:C.blue,color:C.white,border:"none",borderRadius:14,padding:"14px",fontSize:16,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"inherit"}}>
-                      <Circle size={18} strokeWidth={3}/>{t.capture}
-                    </button>
-                    <button onClick={flipCam} style={{background:C.grayLight,border:"none",borderRadius:14,padding:"14px 16px",cursor:"pointer"}}><RefreshCw size={18} color={C.gray}/></button>
-                    <button onClick={close} style={{background:C.redLight,border:"none",borderRadius:14,padding:"14px 16px",cursor:"pointer"}}><X size={18} color={C.red}/></button>
-                  </div>
-                </>
               )}
+              <div style={{display: cameraOn ? "block" : "none"}}>
+                <video ref={videoRef} autoPlay playsInline style={{width:"100%",borderRadius:12,background:"#000",display:"block"}}/>
+                <canvas ref={canvasRef} style={{display:"none"}}/>
+                <div style={{display:"flex",gap:10,marginTop:12}}>
+                  <button onClick={capture} style={{flex:1,background:C.blue,color:C.white,border:"none",borderRadius:14,padding:"14px",fontSize:16,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"inherit"}}>
+                    <Circle size={18} strokeWidth={3}/>{t.capture}
+                  </button>
+                  <button onClick={flipCam} style={{background:C.grayLight,border:"none",borderRadius:14,padding:"14px 16px",cursor:"pointer"}}><RefreshCw size={18} color={C.gray}/></button>
+                  <button onClick={close} style={{background:C.redLight,border:"none",borderRadius:14,padding:"14px 16px",cursor:"pointer"}}><X size={18} color={C.red}/></button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -275,7 +325,7 @@ function ConflictScreen({t,lang,result,profile,onBack,onProceed}){
 }
 
 // ── RESULTS ───────────────────────────────────────────────────────────────────
-function ResultsScreen({t,lang,result,onReset}){
+function ResultsScreen({t,lang,result,onReset,onAddToProfile}){
   if(!result)return null;
   const safe=!result.conflictFound&&!result.allergyAlert;
   return(
@@ -316,6 +366,7 @@ function ResultsScreen({t,lang,result,onReset}){
         </Card>
       ))}
       {result.generalNote&&<Card><div style={{fontSize:14,color:C.gray,lineHeight:1.6}}>📋 {result.generalNote}</div></Card>}
+      <BigBtn onClick={onAddToProfile} label={lang==="ml"?"പ്രൊഫൈലിലേക്ക് ചേർക്കുക":"Save to Profile"} icon={ClipboardList} color={C.green}/>
       <BigBtn onClick={onReset} label={t.scanAnother} icon={Camera} color={C.blue}/>
     </div>
   );
@@ -386,15 +437,36 @@ function SafetyScreen({t,lang,result,profile}){
 // ── ALARM ─────────────────────────────────────────────────────────────────────
 function AlarmScreen({t,lang,profile,alarms,setAlarms}){
   const [showForm,setShowForm]=useState(false);
+  const [editingId,setEditingId]=useState(null);
   const [selColor,setSelColor]=useState(ALARM_COLORS[0].hex);
   const [selMed,setSelMed]=useState(profile.currentMedications?.[0]?.name||"");
   const [selTime,setSelTime]=useState("08:00");
   const [selSize,setSelSize]=useState(TABLET_SIZES[0]);
   const inp={width:"100%",padding:"11px 13px",fontSize:16,border:`2px solid #e5e7eb`,borderRadius:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",marginBottom:12};
 
+  const openForm=(alarm=null)=>{
+    if(alarm){
+      setEditingId(alarm.id);
+      setSelMed(alarm.med);
+      setSelTime(alarm.time);
+      setSelColor(alarm.color);
+      setSelSize(alarm.size);
+    } else {
+      setEditingId(null);
+      setSelMed(profile.currentMedications?.[0]?.name||"");
+      setSelTime("08:00");
+    }
+    setShowForm(true);
+  };
+
   const save=()=>{
     if(!selMed||!selTime)return;
-    const updated=[...alarms,{id:Date.now().toString(),med:selMed,time:selTime,color:selColor,size:selSize,enabled:true}];
+    let updated;
+    if(editingId){
+      updated = alarms.map(a => a.id === editingId ? {...a, med:selMed, time:selTime, color:selColor, size:selSize} : a);
+    } else {
+      updated=[...alarms,{id:Date.now().toString(),med:selMed,time:selTime,color:selColor,size:selSize,enabled:true}];
+    }
     setAlarms(updated);store.saveAlarms(updated);setShowForm(false);
   };
   const toggle=(id)=>{const u=alarms.map(a=>a.id===id?{...a,enabled:!a.enabled}:a);setAlarms(u);store.saveAlarms(u);};
@@ -404,10 +476,10 @@ function AlarmScreen({t,lang,profile,alarms,setAlarms}){
   return(
     <div style={{padding:"18px 16px"}}>
       <div style={{fontSize:21,fontWeight:900,color:C.blue,marginBottom:4}}>⏰ {t.alarmTitle}</div>
-      <div style={{fontSize:13,color:"#6b7280",marginBottom:16}}>{t.alarmSub}</div>
+      <div style={{fontSize:13,color:"#6b7280",marginBottom:16}}>Auto-generated from your medicines. Add or edit below.</div>
       {showForm&&(
-        <Card info style={{marginBottom:14}}>
-          <div style={{fontSize:16,fontWeight:800,color:C.blue,marginBottom:14}}>➕ {t.addAlarm}</div>
+        <Card info className="slide-up">
+          <div style={{fontSize:16,fontWeight:800,color:C.blue,marginBottom:14}}>{editingId ? "✏ Edit Alarm" : "➕ " + t.addAlarm}</div>
           <label style={{fontSize:13,fontWeight:700,color:C.gray,display:"block",marginBottom:6}}>{t.alarmMed}</label>
           <select value={selMed} onChange={e=>setSelMed(e.target.value)} style={inp}>
             {(profile.currentMedications||[]).map(m=><option key={m.id} value={m.name}>{m.name} {m.dosage}</option>)}
@@ -425,12 +497,12 @@ function AlarmScreen({t,lang,profile,alarms,setAlarms}){
             {TABLET_SIZES.map(s=><option key={s} value={s}>{s}</option>)}
           </select>
           <div style={{display:"flex",gap:10}}>
-            <button onClick={save} style={{flex:1,background:C.blue,color:C.white,border:"none",borderRadius:12,padding:"13px",fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>{t.saveAlarm}</button>
-            <button onClick={()=>setShowForm(false)} style={{background:C.grayLight,border:"none",borderRadius:12,padding:"13px 16px",cursor:"pointer",fontFamily:"inherit",color:C.gray}}>✕</button>
+            <button onClick={save} className="bounce-hover" style={{flex:1,background:C.blue,color:C.white,border:"none",borderRadius:12,padding:"13px",fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>{editingId ? "Save Edit" : t.saveAlarm}</button>
+            <button onClick={()=>setShowForm(false)} className="bounce-hover" style={{background:C.grayLight,border:"none",borderRadius:12,padding:"13px 16px",cursor:"pointer",fontFamily:"inherit",color:C.gray}}>✕</button>
           </div>
         </Card>
       )}
-      <BigBtn onClick={()=>setShowForm(true)} label={t.addAlarm} icon={Bell} color={C.blue}/>
+      {!showForm && <BigBtn onClick={()=>openForm(null)} label={t.addAlarm} icon={Bell} color={C.blue}/>}
       {alarms.length===0?(
         <div style={{textAlign:"center",padding:"36px 20px"}}>
           <div style={{fontSize:48,marginBottom:12}}>⏰</div>
@@ -438,23 +510,23 @@ function AlarmScreen({t,lang,profile,alarms,setAlarms}){
           <div style={{fontSize:13,color:"#9ca3af",marginTop:6}}>{t.noAlarmsSub}</div>
         </div>
       ):alarms.map(a=>(
-        <div key={a.id} style={{background:C.white,borderRadius:16,padding:18,marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.07)",borderLeft:`5px solid ${a.color}`,opacity:a.enabled?1:.65}}>
+        <div key={a.id} className="slide-up slide-up-delay-1" style={{background:C.white,borderRadius:16,padding:18,marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.07)",borderLeft:`5px solid ${a.color}`,opacity:a.enabled?1:.65}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-            <div>
+            <div onClick={()=>openForm(a)} style={{cursor:"pointer",flex:1}}>
               <div style={{fontSize:26,fontWeight:900,color:"#1e293b"}}>{fmt(a.time)}</div>
               <div style={{fontSize:16,fontWeight:700,marginTop:4,display:"flex",alignItems:"center",gap:8}}>
                 <span style={{width:13,height:13,borderRadius:"50%",background:a.color,display:"inline-block",flexShrink:0}}/>
-                {a.med}
+                {a.med} <span style={{fontSize:14,color:"#9ca3af",marginLeft:6}}>✏️ Edit</span>
               </div>
               <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>{a.size}</div>
             </div>
-            <button onClick={()=>del(a.id)} style={{background:C.redLight,color:C.red,border:"none",borderRadius:10,padding:"8px 12px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t.deleteAlarm}</button>
+            <button onClick={(e)=>{e.stopPropagation(); del(a.id);}} className="bounce-hover" style={{background:C.redLight,color:C.red,border:"none",borderRadius:10,padding:"8px 12px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginLeft:10}}>{t.deleteAlarm}</button>
           </div>
           <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}>
             <Badge label={a.enabled?t.alarmOn:t.alarmOff} color={a.enabled?C.green:C.red}/>
             <Badge label={a.size} color={C.blue}/>
           </div>
-          <button onClick={()=>toggle(a.id)} style={{marginTop:12,background:a.enabled?C.greenLight:C.grayLight,border:`2px solid ${a.enabled?C.green:"#e5e7eb"}`,borderRadius:12,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:a.enabled?C.green:C.gray,display:"flex",alignItems:"center",gap:8}}>
+          <button onClick={(e)=>{e.stopPropagation(); toggle(a.id);}} className="bounce-hover" style={{marginTop:12,width:"100%",background:a.enabled?C.greenLight:C.grayLight,border:`2px solid ${a.enabled?C.green:"#e5e7eb"}`,borderRadius:12,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:a.enabled?C.green:C.gray,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             <Bell size={14}/>{a.enabled?(lang==="ml"?"ഓൺ — ഓഫ് ചെയ്യാൻ":"ON — tap to disable"):(lang==="ml"?"ഓഫ് — ഓൺ ചെയ്യാൻ":"OFF — tap to enable")}
           </button>
         </div>
@@ -769,6 +841,72 @@ function AlarmPopup({alarm,t,onDismiss}){
   );
 }
 
+// ── CARE CONNECT ──────────────────────────────────────────────────────────────
+function ConnectScreen({t,lang,profile}){
+  const handleShare=()=>{
+    const d=new Date().toLocaleDateString(lang==="ml"?"ml-IN":"en-IN");
+    const meds=profile.currentMedications||[];
+    const lowStock=meds.filter(m=>(m.remainingQuantity||0)<5).map(m=>m.name);
+    let msg = `*Kurippu Update - ${profile.name}*\n📅 ${d}\n\n`;
+    msg += `I have checked my Kurippu app today.\n`;
+    if(lowStock.length>0){
+      msg += `\n⚠️ *LOW STOCK ALERT:*\nPlease buy these medicines soon:\n`;
+      lowStock.forEach(m=>msg+=`- ${m}\n`);
+    } else {
+      msg += `✅ Medicine stock looks good.\n`;
+    }
+    const url=`https://wa.me/${(profile.caretakerPhone||"").replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+    window.open(url,"_blank");
+  };
+
+  const handleRefill=(m)=>{
+    let msg = `⚠️ *Restock Needed*\nHi, I am running low on *${m.name} ${m.dosage}*.\nI only have ${m.remainingQuantity} left.\nPlease buy more soon.`;
+    const url=`https://wa.me/${(profile.caretakerPhone||"").replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+    window.open(url,"_blank");
+  };
+
+  return(
+    <div style={{padding:"24px 20px"}} className="slide-up">
+      <div style={{fontSize:24,fontWeight:900,color:C.blue,marginBottom:8}}>🤝 {lang==="ml"?"സഹായം":"Care Connect"}</div>
+      <div style={{fontSize:14,color:C.gray,marginBottom:24,fontWeight:500}}>{lang==="ml"?"കെയർടേക്കറുമായി എളുപ്പത്തിൽ വിവരങ്ങൾ പങ്കിടുക":"Easily share updates and request medicine refills from your family."}</div>
+      
+      <BigBtn onClick={handleShare} label={lang==="ml"?"മെഡിസിൻ റിപ്പോർട്ട് അയക്കുക":"WhatsApp Daily Report"} sub={lang==="ml"?"കെയർടേക്കർക്ക് മാറ്റങ്ങൾ അറിയിക്കുക":"Send your medicine status to your caretaker"} icon={Phone} color={C.green}/>
+      
+      {profile.caretakerPhone && (
+         <a href={`tel:${profile.caretakerPhone}`} style={{textDecoration:"none"}}>
+            <BigBtn label={lang==="ml"?"കെയർടേക്കറെ വിളിക്കുക":"Call Caretaker"} sub={`Ph: ${profile.caretakerPhone}`} icon={Phone} color={C.blue}/>
+         </a>
+      )}
+
+      {profile.emergencyContact && (
+         <a href={`tel:${profile.emergencyContact}`} style={{textDecoration:"none"}}>
+            <BigBtn label={lang==="ml"?"ഡോക്ടറെ വിളിക്കുക":"Call Doctor"} sub={`Ph: ${profile.emergencyContact}`} icon={Phone} color={C.purple}/>
+         </a>
+      )}
+
+      <div style={{fontSize:18,fontWeight:900,color:C.gray,marginTop:32,marginBottom:16}}>💊 {lang==="ml"?"മരുന്ന് തീരാറായവ":"Auto-Refill Requests"}</div>
+      {(profile.currentMedications||[])
+        .filter(m => (m.remainingQuantity||0) < 10)
+        .map(m=>{
+         return (
+           <Card key={m.id} danger={(m.remainingQuantity||0)<5} className="slide-up slide-up-delay-1" style={{padding:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+             <div style={{flex: 1}}>
+               <div style={{fontSize:16,fontWeight:800,color:C.blue}}>{m.name}</div>
+               <div style={{fontSize:13,color:C.gray,fontWeight:700,marginTop:4}}>{t.stock}: <span style={{color:C.red}}>{m.remainingQuantity}</span></div>
+             </div>
+             <button onClick={()=>handleRefill(m)} className="bounce-hover" style={{background:C.green,color:C.white,border:"none",borderRadius:12,padding:"10px 14px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+               Refill via App
+             </button>
+           </Card>
+         );
+      })}
+      {(profile.currentMedications||[]).filter(m => (m.remainingQuantity||0) < 10).length === 0 && (
+          <div style={{textAlign:"center",padding:"40px",color:C.gray,opacity:.7,fontWeight:600}}>Stocks are healthy!</div>
+      )}
+    </div>
+  );
+}
+
 // ── ERROR ─────────────────────────────────────────────────────────────────────
 function ErrorScreen({lang,message,onRetry}){
   return(
@@ -860,7 +998,34 @@ export default function App(){
 
   const goHome=()=>{setScreen(SCREENS.HOME);setActiveTab(SCREENS.HOME);setScanResult(null);setErrorMsg("");};
   const goTab=(id)=>{setActiveTab(id);setScreen(id);};
-  const setProfile=(p)=>{setProfileState(p);store.saveProfile(p);};
+  const setProfile=(p)=>{
+    setProfileState(p);
+    store.saveProfile(p);
+    autoGenerateAlarms(p.currentMedications||[], store);
+    setAlarms(store.loadAlarms());
+  };
+
+  const handleAddToProfile=()=>{
+    if(!scanResult||!scanResult.medicines)return;
+    const newMeds=scanResult.medicines.map(m=>({
+      ...m,
+      id:Date.now().toString()+Math.random().toString(),
+      remainingQuantity:m.totalQuantity||10,
+      condition:m.condition||"Prescribed"
+    }));
+    const updated={...profile,currentMedications:[...(profile.currentMedications||[]),...newMeds]};
+    setProfile(updated);
+    alert(lang==="ml"?"മരുന്നുകൾ നിങ്ങളുടെ പ്രൊഫൈലിലേക്ക് ചേർത്തു!":"Medicines successfully added to your profile!");
+    goHome();
+    setTimeout(()=>goTab(SCREENS.PROFILE),10);
+  };
+
+  useEffect(()=>{
+    if(alarms.length === 0 && profile.currentMedications?.length > 0) {
+      autoGenerateAlarms(profile.currentMedications, store);
+      setAlarms(store.loadAlarms());
+    }
+  }, []);
 
   return(
     <div style={{minHeight:"100dvh",background:C.grayLight,fontFamily:"'Noto Sans Malayalam','Segoe UI',system-ui,sans-serif",maxWidth:480,margin:"0 auto",display:"flex",flexDirection:"column",boxShadow:"0 0 60px rgba(0,0,0,0.15)", overflow: "hidden"}}>
@@ -872,27 +1037,28 @@ export default function App(){
         * { transition: font-size 0.2s ease; }
       `}</style>
       {showNav&&(
-        <header style={{position:"sticky",top:0,zIndex:100,background:C.white,borderBottom:`2px solid ${C.blueLight}`,padding:"12px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 8px rgba(0,0,0,0.06)",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:"1.5rem"}}>💊</span>
-            <span style={{fontSize:"1.2rem",fontWeight:900,color:C.blue}}>{lang==="ml"?"കുറിപ്പ്":"Kurippu"}</span>
+        <header style={{position:"sticky",top:0,zIndex:100,background:"rgba(255,255,255,0.85)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",borderBottom:`1px solid rgba(255,255,255,0.6)`,padding:"16px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 10px 30px rgba(0,0,0,0.03)",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <span style={{fontSize:"1.8rem"}}>💊</span>
+            <span style={{fontSize:"1.3rem",fontWeight:900,color:C.blue}}>{lang==="ml"?"കുറിപ്പ്":"Kurippu"}</span>
           </div>
-          <div style={{display:"flex",background:C.grayLight,borderRadius:12,padding:3,gap:3}}>
+          <div style={{display:"flex",background:C.grayLight,borderRadius:16,padding:4,gap:4,border:"1px solid #e2e8f0"}}>
             {["en","ml"].map(l=>(
-              <button key={l} onClick={()=>setLang(l)} style={{padding:"6px 10px",borderRadius:9,border:"none",background:lang===l?C.blue:"transparent",color:lang===l?C.white:"#6b7280",fontSize:"0.8rem",fontWeight:900,cursor:"pointer",transition:"all .2s",fontFamily:"inherit"}}>{l==="en"?"EN":"മല"}</button>
+              <button key={l} onClick={()=>setLang(l)} style={{padding:"8px 14px",borderRadius:12,border:"none",background:lang===l?C.blue:"transparent",color:lang===l?C.white:"#6b7280",fontSize:"0.85rem",fontWeight:900,cursor:"pointer",transition:"all .2s",fontFamily:"inherit"}}>{l==="en"?"EN":"മല"}</button>
             ))}
           </div>
         </header>
       )}
 
       <main style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
-        {screen===SCREENS.HOME    &&<HomeScreen    t={t} lang={lang} profile={profile} onScan={handleScan} onViewLog={()=>goTab(SCREENS.MEDLOG)} onDemo={()=>goTab(SCREENS.DEMO)}/>}
+        {screen===SCREENS.HOME    &&<HomeScreen    t={t} lang={lang} profile={profile} onScan={handleScan} onViewLog={()=>goTab(SCREENS.MEDLOG)} onDemo={()=>goTab(SCREENS.DEMO)} onConnect={()=>goTab(SCREENS.CONNECT)}/>}
         {screen===SCREENS.LOADING &&<LoadingScreen t={t} lang={lang}/>}
         {screen===SCREENS.CONFLICT&&<ConflictScreen t={t} lang={lang} result={scanResult} profile={profile} onBack={goHome} onProceed={()=>setScreen(SCREENS.RESULTS)}/>}
-        {screen===SCREENS.RESULTS &&<ResultsScreen t={t} lang={lang} result={scanResult} onReset={goHome}/>}
+        {screen===SCREENS.RESULTS &&<ResultsScreen t={t} lang={lang} result={scanResult} onReset={goHome} onAddToProfile={handleAddToProfile}/>}
         {screen===SCREENS.SAFETY  &&<SafetyScreen  t={t} lang={lang} result={scanResult} profile={profile}/>}
         {screen===SCREENS.ALARM   &&<AlarmScreen   t={t} lang={lang} profile={profile} alarms={alarms} setAlarms={setAlarms}/>}
         {screen===SCREENS.DEMO    &&<DemoScreen    t={t} lang={lang} onBack={goHome}/>}
+        {screen===SCREENS.CONNECT &&<ConnectScreen t={t} lang={lang} profile={profile}/>}
         {screen===SCREENS.MEDLOG  &&<MedLogScreen  t={t} lang={lang} profile={profile} setProfile={setProfile}/>}
         {screen===SCREENS.HISTORY &&<HistoryScreen t={t} lang={lang} history={history}/>}
         {screen===SCREENS.PROFILE &&<ProfileScreen t={t} lang={lang} profile={profile} setProfile={setProfile} fontScale={fontScale} setFontScale={setFontScale}/>}
@@ -900,19 +1066,21 @@ export default function App(){
       </main>
 
       {showNav&&(
-        <nav style={{background:C.white,borderTop:`2px solid ${C.blueLight}`,boxShadow:"0 -4px 16px rgba(0,0,0,0.08)",flexShrink:0}}>
-          <div style={{display:"flex"}}>
+        <nav style={{padding:"12px 16px 20px 16px",background:"rgba(241, 245, 249, 0.85)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderTop:`1px solid rgba(255,255,255,0.8)`,boxShadow:"0 -12px 40px rgba(0,0,0,0.05)",flexShrink:0}}>
+          <div style={{display:"flex", background: "#ffffff", borderRadius: 28, padding: "8px 6px", boxShadow: "0 6px 20px rgba(15, 23, 42, 0.04)", border: "1px solid #e2e8f0"}}>
             {NAV.map(({id,icon:Icon,key})=>{
               const active=activeTab===id;
               return(
-                <button key={id} onClick={()=>goTab(id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,padding:"10px 0",border:"none",background:"transparent",color:active?C.blue:"#9ca3af",cursor:"pointer",transition:"all .15s",borderTop:active?`3px solid ${C.blue}`:"3px solid transparent",fontFamily:"inherit"}}>
-                  <Icon size={21} strokeWidth={active?2.5:1.8}/>
-                  <span style={{fontSize:9,fontWeight:active?800:500}}>{t[key]}</span>
+                <button key={id} onClick={()=>goTab(id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,padding:"10px 0",border:"none",borderRadius:22,background:active?"#eff6ff":"transparent",color:active?C.blue:"#9ca3af",cursor:"pointer",transition:"all .25s",fontFamily:"inherit"}}>
+                  <Icon size={25} strokeWidth={active?3:2}/>
+                  <span style={{fontSize:10,fontWeight:active?800:600}}>{t[key]}</span>
                 </button>
               );
             })}
           </div>
-          <SOSButton t={t}/>
+          <div style={{marginTop: 14, borderRadius: 26, overflow: "hidden"}}>
+            <SOSButton t={t}/>
+          </div>
         </nav>
       )}
 
